@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      keycloak-js:
+        specifier: 26.0.7
+        version: 26.0.7
+
+packages:
+
+  keycloak-js@26.0.7:
+    resolution: {integrity: sha512-vKCk1ISMiouYRLjMzi5fKp58RnYxKEBS29BoDgVfYwVW94IXchj9jLqBvIet31VD1v79l3WaWT+WMX7fH8O4wA==}
+
+snapshots:
+
+  keycloak-js@26.0.7: {}

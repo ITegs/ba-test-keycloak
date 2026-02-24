@@ -1,0 +1,17 @@
+{
+  "name": "test-keycloak",
+  "version": "1.0.0",
+  "description": "Local Keycloak IdP setup with demo app and passkeys",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js",
+    "keycloak:up": "docker compose up -d",
+    "keycloak:down": "docker compose down",
+    "keycloak:logs": "docker compose logs -f keycloak"
+  },
+  "dependencies": {
+    "keycloak-js": "26.0.7"
+  },
+  "private": true
+}
