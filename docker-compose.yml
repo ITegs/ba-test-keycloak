@@ -12,3 +12,14 @@ services:
       - "8080:8080"
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: keycloak-demo-client
+    depends_on:
+      - keycloak
+    environment:
+      PORT: 3000
+    ports:
+      - "3000:3000"
