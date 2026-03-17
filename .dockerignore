@@ -1,8 +1,0 @@
-node_modules
-npm-debug.log
-pnpm-debug.log
-.git
-.gitignore
-.idea
-.DS_Store
-README.md

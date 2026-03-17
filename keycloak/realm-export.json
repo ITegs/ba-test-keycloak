@@ -6,6 +6,7 @@
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
   "rememberMe": true,
+  "loginTheme": "aet-passkeyv2",
   "webAuthnPolicyRpEntityName": "Test Keycloak Demo",
   "webAuthnPolicySignatureAlgorithms": [
     "ES256",
