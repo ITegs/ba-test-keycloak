@@ -6,13 +6,12 @@
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
   "rememberMe": true,
-  "loginTheme": "aet-passkeyv2",
   "webAuthnPolicyRpEntityName": "Test Keycloak Demo",
   "webAuthnPolicySignatureAlgorithms": [
     "ES256",
     "RS256"
   ],
-  "webAuthnPolicyRpId": "localhost",
+  "webAuthnPolicyRpId": "${KC_WEBAUTHN_RP_ID}",
   "webAuthnPolicyAttestationConveyancePreference": "not specified",
   "webAuthnPolicyAuthenticatorAttachment": "not specified",
   "webAuthnPolicyRequireResidentKey": "not specified",
@@ -25,7 +24,7 @@
     "ES256",
     "RS256"
   ],
-  "webAuthnPolicyPasswordlessRpId": "localhost",
+  "webAuthnPolicyPasswordlessRpId": "${KC_WEBAUTHN_RP_ID}",
   "webAuthnPolicyPasswordlessAttestationConveyancePreference": "not specified",
   "webAuthnPolicyPasswordlessAuthenticatorAttachment": "not specified",
   "webAuthnPolicyPasswordlessPasskeysEnabled": true,
@@ -63,12 +62,42 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "redirectUris": [
-        "http://localhost:3000/*"
+        "http://localhost:3000/*",
+        "${KC_DEMO_ADDITIONAL_REDIRECT_URI}"
       ],
       "webOrigins": [
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "${KC_DEMO_ADDITIONAL_WEB_ORIGIN}"
       ],
       "protocol": "openid-connect"
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "aet-tum-login-bridge",
+      "displayName": "TUM Login",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "addReadTokenRoleOnCreate": false,
+      "authenticateByDefault": false,
+      "linkOnly": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "${KC_BROKER_CLIENT_ID}",
+        "clientSecret": "${KC_BROKER_CLIENT_SECRET}",
+        "authorizationUrl": "https://keycloak.ase.in.tum.de/realms/tumidpldap/protocol/openid-connect/auth",
+        "tokenUrl": "https://keycloak.ase.in.tum.de/realms/tumidpldap/protocol/openid-connect/token",
+        "userInfoUrl": "https://keycloak.ase.in.tum.de/realms/tumidpldap/protocol/openid-connect/userinfo",
+        "jwksUrl": "https://keycloak.ase.in.tum.de/realms/tumidpldap/protocol/openid-connect/certs",
+        "issuer": "https://keycloak.ase.in.tum.de/realms/tumidpldap",
+        "defaultScope": "openid profile email",
+        "useJwksUrl": "true",
+        "syncMode": "IMPORT",
+        "backchannelSupported": "true",
+        "validateSignature": "true"
+      }
     }
   ],
   "users": [

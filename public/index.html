@@ -4,35 +4,47 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Keycloak Demo App</title>
-    <link rel="stylesheet" href="/styles.css" />
-    <script type="module" src="/app.js"></script>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <main class="container">
-      <h1>Keycloak Demo App</h1>
-      <p class="subtitle">OIDC login against realm <code>demo</code> with passkeys enabled</p>
+    <main class="app-shell">
+      <header class="top-bar">
+        <div>
+          <h1>Keycloak Demo App</h1>
+          <p class="subtitle">Passkey and TUM Login</p>
+        </div>
+        <a
+          id="admin-btn"
+          class="admin-link-button"
+          href="#"
+          >Keycloak Admin</a
+        >
+      </header>
 
-      <section class="card">
-        <div class="row">
-          <span>Status:</span>
-          <strong id="auth-status">checking...</strong>
+      <section class="panel login-window" id="login-window">
+        <p class="status-line">Status: <strong id="auth-status">checking...</strong></p>
+        <h2>Sign In</h2>
+        <p class="helper-text">Choose one of the two login options.</p>
+        <div class="actions stacked">
+          <button id="login-passkey-btn">Login with Passkey</button>
+          <button id="login-tum-btn" class="secondary">Login with TUM Login</button>
+        </div>
+      </section>
+
+      <section class="panel account-window" id="user-card" hidden>
+        <div class="account-header">
+          <h2>User Session</h2>
+          <p class="status-line">Status: <strong id="auth-status-account">authenticated</strong></p>
         </div>
         <div class="actions">
-          <button id="login-btn">Login</button>
-          <button id="register-passkey-btn" disabled>Register Passkey</button>
-          <button id="logout-btn" disabled>Logout</button>
-          <button id="refresh-btn" disabled>Refresh Token</button>
+          <button id="create-passkey-btn">Create Passkey</button>
+          <button id="logout-btn" class="danger">Logout</button>
         </div>
-      </section>
-
-      <section class="card" id="user-card" hidden>
-        <h2>User</h2>
-        <pre id="user-info"></pre>
-      </section>
-
-      <section class="card" id="token-card" hidden>
-        <h2>Access Token</h2>
-        <pre id="token-info"></pre>
+        <div class="user-data">
+          <h3>User Data</h3>
+          <pre id="user-info"></pre>
+        </div>
       </section>
     </main>
   </body>

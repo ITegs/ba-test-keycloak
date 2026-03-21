@@ -1,11 +1,14 @@
 :root {
-  --bg: #f5f7fb;
-  --card: #ffffff;
-  --text: #1b2430;
-  --muted: #516071;
-  --primary: #0057d9;
-  --primary-hover: #0048b3;
-  --border: #dce3ec;
+  --bg-top: #f5eee4;
+  --bg-bottom: #f7fbff;
+  --panel: #ffffff;
+  --text: #1f2a36;
+  --muted: #5f7080;
+  --border: #d5dfe9;
+  --primary: #0c4f88;
+  --primary-hover: #0a426f;
+  --secondary: #dfeefc;
+  --danger: #aa2e2e;
 }
 
 * {
@@ -14,65 +17,129 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
-  background: radial-gradient(circle at top right, #dce7ff, var(--bg) 40%);
   color: var(--text);
+  background:
+    radial-gradient(900px 500px at 5% 0%, #fbe8d2 0%, transparent 70%),
+    radial-gradient(1100px 600px at 100% 100%, #d8eafe 0%, transparent 70%),
+    linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
 }
 
-.container {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 40px 16px;
+.app-shell {
+  width: min(920px, calc(100% - 32px));
+  margin: 28px auto;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 h1 {
   margin: 0;
+  font-size: 2rem;
+}
+
+h2 {
+  margin: 0;
 }
 
 .subtitle {
-  margin: 8px 0 24px;
+  margin: 6px 0 0;
   color: var(--muted);
 }
 
-.card {
-  background: var(--card);
+.panel {
+  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 8px 28px rgba(15, 27, 43, 0.06);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(15, 36, 62, 0.08);
 }
 
-.row {
+.login-window {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 26px;
+  text-align: center;
+}
+
+.account-window {
+  padding: 20px;
+}
+
+.account-header {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.status-line {
+  margin: 0;
+  color: var(--muted);
+}
+
+.login-window .status-line {
+  margin-bottom: 16px;
+}
+
+.helper-text {
+  margin: 10px 0 18px;
+  color: var(--muted);
 }
 
 .actions {
-  margin-top: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
+}
+
+.actions.stacked {
+  flex-direction: column;
 }
 
 button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 15px;
+  font-weight: 700;
+  cursor: pointer;
   background: var(--primary);
   color: #fff;
-  border: 0;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 button:hover {
   background: var(--primary-hover);
 }
 
-button:disabled {
-  background: #8fa9d4;
-  cursor: not-allowed;
+button.secondary {
+  background: var(--secondary);
+  color: #173147;
+}
+
+button.secondary:hover {
+  background: #cde4f8;
+}
+
+button.danger {
+  background: var(--danger);
+}
+
+button.danger:hover {
+  background: #8f2626;
+}
+
+.user-data {
+  margin-top: 18px;
+}
+
+.user-data h3 {
+  margin: 0 0 10px;
 }
 
 pre {
@@ -80,4 +147,35 @@ pre {
   white-space: pre-wrap;
   word-wrap: break-word;
   font-size: 0.9rem;
+  background: #f6f9fc;
+  border: 1px solid #d9e4ef;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.admin-link-button {
+  background: #162636;
+  color: #fff;
+  border: 1px solid #334a63;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.admin-link-button:hover {
+  background: #101f2d;
+}
+
+@media (max-width: 700px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .app-shell {
+    width: calc(100% - 20px);
+    margin: 20px auto;
+  }
 }

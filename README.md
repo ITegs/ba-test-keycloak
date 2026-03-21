@@ -5,6 +5,14 @@ This project includes:
 - A demo web app on `http://localhost:3000` that authenticates with Keycloak
 - WebAuthn passkey policy enabled for realm `demo`
 
+## 0. Configure Environment
+
+Create a local `.env` from the template and fill in real values:
+
+```bash
+cp .env.example .env
+```
+
 ## 1. Start Keycloak
 
 ```bash
@@ -15,8 +23,8 @@ Keycloak URL:
 - `http://localhost:8080`
 
 Admin console credentials:
-- Username: `admin`
-- Password: `admin`
+- Username: from `.env` (`KEYCLOAK_ADMIN`)
+- Password: from `.env` (`KEYCLOAK_ADMIN_PASSWORD`)
 
 ## 2. Start Demo App
 
@@ -38,7 +46,7 @@ The file `keycloak/realm-export.json` is imported automatically and contains:
   - Password: `demo`
 - Passkey policy:
   - Passwordless WebAuthn (resident key required, user verification required)
-  - RP ID set to `localhost`
+  - RP ID: from `.env` (`KC_WEBAUTHN_RP_ID`)
 
 ## Use Password Login
 
