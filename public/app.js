@@ -203,13 +203,14 @@ function initAuth() {
       if (authenticated) {
         setAuthenticatedUi();
         keycloak
-          .loadUserProfile()
-          .then((profile) => {
-            keycloakUserProfile = profile;
+          .loadUserInfo()
+          .then((userInfo) => {
+            keycloakUserProfile = userInfo || {};
             renderAuthenticatedDetails();
           })
-          .catch((error) => {
-            console.warn('Failed to load user profile', error);
+          .catch(() => {
+            keycloakUserProfile = {};
+            renderAuthenticatedDetails();
           });
 
         if (actionStatus === 'success') {
@@ -320,6 +321,7 @@ const authenticatePasskey = async () => {
 
     const authenticateResponse = await fetch(getPasskeyEndpoint('authenticate'), {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json'
       },
