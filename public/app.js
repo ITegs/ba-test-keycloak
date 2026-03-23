@@ -10,6 +10,10 @@ const createPasskeyBtn = document.getElementById('create-passkey-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const userCard = document.getElementById('user-card');
 const userInfo = document.getElementById('user-info');
+const refreshPasskeysBtn = document.getElementById('refresh-passkeys-btn');
+const passkeyList = document.getElementById('passkey-list');
+const passkeyEmpty = document.getElementById('passkey-empty');
+const passkeyFeedback = document.getElementById('passkey-feedback');
 
 let keycloak;
 let keycloakUserProfile = null;
@@ -120,6 +124,146 @@ function renderAuthenticatedDetails() {
   userInfo.textContent = JSON.stringify(buildUserInfo(profile, keycloak.token), null, 2);
 }
 
+function setPasskeyFeedback(message = '', isError = false) {
+  if (!passkeyFeedback) {
+    return;
+  }
+
+  if (!message) {
+    passkeyFeedback.textContent = '';
+    passkeyFeedback.hidden = true;
+    passkeyFeedback.classList.remove('error');
+    return;
+  }
+
+  passkeyFeedback.textContent = message;
+  passkeyFeedback.hidden = false;
+  passkeyFeedback.classList.toggle('error', Boolean(isError));
+}
+
+function formatPasskeyCreatedDate(createdDate) {
+  const timestamp = Number(createdDate);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) {
+    return 'Created date unavailable';
+  }
+  const value = new Date(timestamp);
+  if (Number.isNaN(value.getTime())) {
+    return 'Created date unavailable';
+  }
+  return `Created ${value.toLocaleString()}`;
+}
+
+function renderPasskeyList(credentials = []) {
+  if (!passkeyList || !passkeyEmpty) {
+    return;
+  }
+
+  passkeyList.innerHTML = '';
+  if (!Array.isArray(credentials) || credentials.length === 0) {
+    passkeyEmpty.hidden = false;
+    return;
+  }
+
+  passkeyEmpty.hidden = true;
+  credentials.forEach((credential) => {
+    const item = document.createElement('li');
+    item.className = 'passkey-item';
+
+    const meta = document.createElement('div');
+    meta.className = 'passkey-meta';
+
+    const name = document.createElement('div');
+    name.className = 'passkey-name';
+    name.textContent = String(credential?.name || 'Passkey');
+
+    const created = document.createElement('div');
+    created.className = 'passkey-created';
+    created.textContent = formatPasskeyCreatedDate(credential?.createdDate);
+
+    meta.append(name, created);
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'passkey-remove-btn';
+    removeButton.textContent = 'Remove';
+    removeButton.disabled = !credential?.id;
+    removeButton.addEventListener('click', async () => {
+      await deletePasskeyCredential(credential.id, removeButton);
+    });
+
+    item.append(meta, removeButton);
+    passkeyList.append(item);
+  });
+}
+
+async function loadRegisteredPasskeys() {
+  if (!keycloak?.authenticated || !keycloak?.token) {
+    renderPasskeyList([]);
+    return;
+  }
+
+  if (refreshPasskeysBtn) {
+    refreshPasskeysBtn.disabled = true;
+  }
+
+  try {
+    const response = await fetch(getPasskeyEndpoint('credentials'), {
+      headers: {
+        Authorization: `Bearer ${keycloak.token}`
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(payload?.error || 'Failed to load passkeys');
+    }
+
+    renderPasskeyList(payload?.credentials || []);
+  } catch (error) {
+    console.error('Error loading registered passkeys:', error);
+    renderPasskeyList([]);
+    setPasskeyFeedback('Unable to load passkeys.', true);
+  } finally {
+    if (refreshPasskeysBtn) {
+      refreshPasskeysBtn.disabled = false;
+    }
+  }
+}
+
+async function deletePasskeyCredential(credentialModelId, triggerButton) {
+  if (!credentialModelId || !keycloak?.token) {
+    return;
+  }
+
+  if (triggerButton) {
+    triggerButton.disabled = true;
+  }
+
+  try {
+    const response = await fetch(getPasskeyEndpoint(`credentials/${encodeURIComponent(credentialModelId)}`), {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${keycloak.token}`
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload?.error || 'Failed to delete passkey');
+    }
+
+    authStatus.textContent = 'passkey removed';
+    setPasskeyFeedback('Passkey removed.');
+    await loadRegisteredPasskeys();
+  } catch (error) {
+    console.error('Error deleting passkey:', error);
+    setPasskeyFeedback('Failed to remove passkey.', true);
+  } finally {
+    if (triggerButton) {
+      triggerButton.disabled = false;
+    }
+  }
+}
+
 function setAuthenticatedUi() {
   authStatus.textContent = 'authenticated';
   if (authStatusAccount) authStatusAccount.textContent = 'authenticated';
@@ -129,7 +273,9 @@ function setAuthenticatedUi() {
   if (createPasskeyBtn) createPasskeyBtn.disabled = false;
   if (logoutBtn) logoutBtn.disabled = false;
   userCard.hidden = false;
+  setPasskeyFeedback('');
   renderAuthenticatedDetails();
+  void loadRegisteredPasskeys();
 }
 
 function setLoggedOutUi() {
@@ -141,6 +287,8 @@ function setLoggedOutUi() {
   if (createPasskeyBtn) createPasskeyBtn.disabled = true;
   if (logoutBtn) logoutBtn.disabled = true;
   userCard.hidden = true;
+  renderPasskeyList([]);
+  setPasskeyFeedback('');
 }
 
 function wireActions() {
@@ -159,6 +307,11 @@ function wireActions() {
 
   createPasskeyBtn?.addEventListener('click', async () => {
     await createPasskey();
+  });
+
+  refreshPasskeysBtn?.addEventListener('click', async () => {
+    setPasskeyFeedback('');
+    await loadRegisteredPasskeys();
   });
 
   logoutBtn?.addEventListener('click', () => {
@@ -247,13 +400,14 @@ const createPasskey = async () => {
       throw new Error('Missing user identity claims for passkey registration.');
     }
 
+    const passkeyDefaultName = String(appConfig?.passkey?.defaultName || 'My App');
     const userIdBytes = new TextEncoder().encode(accountId).slice(0, 64);
     const challenge = await fetch(getPasskeyEndpoint('challenge')).then(res => res.json());
 
     const credential = await navigator.credentials.create({
       publicKey: {
         challenge: base64UrlToUint8Array(challenge.challenge),
-        rp: { name: "My App", id: window.location.hostname },
+        rp: { name: passkeyDefaultName, id: window.location.hostname },
         user: { id: userIdBytes, name: accountName, displayName },
         pubKeyCredParams: [{ type: "public-key", alg: -7 }],
         authenticatorSelection: { userVerification: "preferred", residentKey: "required" },
@@ -282,10 +436,13 @@ const createPasskey = async () => {
     }
 
     authStatus.textContent = 'passkey created';
+    setPasskeyFeedback('Passkey created.');
+    await loadRegisteredPasskeys();
     console.log("Passkey created:", credential);
   } catch (error) {
     console.error("Error creating passkey:", error);
     authStatus.textContent = 'passkey creation failed';
+    setPasskeyFeedback('Passkey creation failed.', true);
   }
 };
 

@@ -41,6 +41,15 @@
           <button id="create-passkey-btn">Create Passkey</button>
           <button id="logout-btn" class="danger">Logout</button>
         </div>
+        <div class="passkey-manager">
+          <div class="passkey-manager-header">
+            <h3>Registered Passkeys</h3>
+            <button id="refresh-passkeys-btn" class="secondary" type="button">Refresh</button>
+          </div>
+          <p id="passkey-feedback" class="helper-text" hidden></p>
+          <p id="passkey-empty" class="helper-text">No passkeys registered yet.</p>
+          <ul id="passkey-list" class="passkey-list"></ul>
+        </div>
         <div class="user-data">
           <h3>User Data</h3>
           <pre id="user-info"></pre>

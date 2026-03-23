@@ -13,6 +13,11 @@ Create a local `.env` from the template and fill in real values:
 cp .env.example .env
 ```
 
+Relevant client envs:
+- `PUBLIC_KEYCLOAK_URL`
+- `PUBLIC_KEYCLOAK_ADMIN_URL`
+- `PUBLIC_PASSKEY_DEFAULT_NAME` (displayed as RP name in the browser passkey prompt)
+
 ## 1. Start Keycloak
 
 ```bash

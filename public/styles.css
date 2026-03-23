@@ -93,6 +93,10 @@ h2 {
   color: var(--muted);
 }
 
+.helper-text.error {
+  color: var(--danger);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -136,6 +140,66 @@ button.danger:hover {
 
 .user-data {
   margin-top: 18px;
+}
+
+.passkey-manager {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.passkey-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.passkey-manager .helper-text {
+  margin: 10px 0 0;
+}
+
+.passkey-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.passkey-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #d5e2ee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.passkey-meta {
+  min-width: 0;
+}
+
+.passkey-name {
+  font-weight: 700;
+}
+
+.passkey-created {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.passkey-remove-btn {
+  background: var(--danger);
+}
+
+.passkey-remove-btn:hover {
+  background: #8f2626;
 }
 
 .user-data h3 {

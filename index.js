@@ -8,6 +8,7 @@ const BASE_PATH = normalizeBasePath(process.env.BASE_PATH || '');
 const KEYCLOAK_VENDOR_FILE = path.resolve(__dirname, 'node_modules', 'keycloak-js', 'lib', 'keycloak.js');
 const KEYCLOAK_URL = process.env.PUBLIC_KEYCLOAK_URL || 'http://localhost:8080';
 const KEYCLOAK_ADMIN_URL = process.env.PUBLIC_KEYCLOAK_ADMIN_URL || `${KEYCLOAK_URL}/admin/master/console/`;
+const PASSKEY_DEFAULT_NAME = process.env.PUBLIC_PASSKEY_DEFAULT_NAME || 'My App';
 
 const PUBLIC_CONFIG = {
     keycloak: {
@@ -17,6 +18,9 @@ const PUBLIC_CONFIG = {
     },
     urls: {
         admin: KEYCLOAK_ADMIN_URL
+    },
+    passkey: {
+        defaultName: PASSKEY_DEFAULT_NAME
     }
 };
 
