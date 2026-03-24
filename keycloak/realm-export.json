@@ -108,6 +108,12 @@
       "firstName": "Demo",
       "lastName": "User",
       "email": "demo@example.com",
+      "clientRoles": {
+        "account": [
+          "manage-account",
+          "view-profile"
+        ]
+      },
       "credentials": [
         {
           "type": "password",

@@ -19,17 +19,40 @@ let keycloak;
 let keycloakUserProfile = null;
 let appConfig;
 const APP_BASE_URL = new URL('./', window.location.href).toString();
+const PASSKEY_CREDENTIAL_TYPES = new Set(['webauthn-passwordless', 'webauthn']);
 
-function getPasskeyEndpoint(path) {
+function requireKeycloakAuthServer() {
   if (!keycloak?.authServerUrl || !keycloak?.realm) {
     throw new Error('Keycloak is not initialized');
   }
+}
 
-  const normalizedPath = String(path || '').replace(/^\/+/, '');
+function getRealmEndpoint(path = '') {
+  requireKeycloakAuthServer();
+  const normalizedPath = String(path).replace(/^\/+/, '');
   return new URL(
-    `/realms/${encodeURIComponent(keycloak.realm)}/passkey/${normalizedPath}`,
+    `/realms/${encodeURIComponent(keycloak.realm)}/${normalizedPath}`,
     keycloak.authServerUrl
   ).toString();
+}
+
+function getPasskeyEndpoint(path) {
+  const normalizedPath = String(path || '').replace(/^\/+/, '');
+  return getRealmEndpoint(`passkey/${normalizedPath}`);
+}
+
+function getAccountCredentialsEndpoint() {
+  return getRealmEndpoint('account/credentials');
+}
+
+async function parseJsonResponse(response, fallbackValue = {}) {
+  return response.json().catch(() => fallbackValue);
+}
+
+function setElementDisabled(element, isDisabled) {
+  if (element) {
+    element.disabled = Boolean(isDisabled);
+  }
 }
 
 function parseJwtPayload(token) {
@@ -103,19 +126,23 @@ function buildUserInfo(user, token) {
     mfa: user?.mfa_config || null,
     metadata: user?.metadata || null,
     tokenClaims: claims
-        ? {
-          sub: claims.sub,
-          email: claims.email,
-          username: claims.username,
-          amr: claims.amr,
-          iat: claims.iat,
-          exp: claims.exp
-        }
-        : null
+      ? {
+        sub: claims.sub,
+        email: claims.email,
+        username: claims.username,
+        amr: claims.amr,
+        iat: claims.iat,
+        exp: claims.exp
+      }
+      : null
   };
 }
 
 function renderAuthenticatedDetails() {
+  if (!keycloak || !userInfo) {
+    return;
+  }
+
   const profile = {
     ...(keycloakUserProfile || {}),
     ...(keycloak.tokenParsed || {})
@@ -202,31 +229,53 @@ async function loadRegisteredPasskeys() {
     return;
   }
 
-  if (refreshPasskeysBtn) {
-    refreshPasskeysBtn.disabled = true;
-  }
+  setElementDisabled(refreshPasskeysBtn, true);
 
   try {
-    const response = await fetch(getPasskeyEndpoint('credentials'), {
+    const response = await fetch(getAccountCredentialsEndpoint(), {
       headers: {
+        Accept: 'application/json',
         Authorization: `Bearer ${keycloak.token}`
       }
     });
-    const payload = await response.json().catch(() => ({}));
+    const payload = await parseJsonResponse(response);
 
     if (!response.ok) {
       throw new Error(payload?.error || 'Failed to load passkeys');
     }
 
-    renderPasskeyList(payload?.credentials || []);
+    const credentials = Array.isArray(payload)
+      ? payload.flatMap((credentialType) => {
+        const type = String(credentialType?.type || '').toLowerCase();
+        if (!PASSKEY_CREDENTIAL_TYPES.has(type)) {
+          return [];
+        }
+
+        const metadatas = Array.isArray(credentialType?.userCredentialMetadatas)
+          ? credentialType.userCredentialMetadatas
+          : [];
+
+        return metadatas
+          .map((metadata) => metadata?.credential)
+          .filter(Boolean);
+      })
+      : Array.isArray(payload?.credentials)
+        ? payload.credentials
+        : [];
+
+    const passkeyCredentials = credentials.map((credential) => ({
+      id: credential?.id || null,
+      name: credential?.name || credential?.userLabel || 'Passkey',
+      createdDate: credential?.createdDate || null
+    }));
+
+    renderPasskeyList(passkeyCredentials);
   } catch (error) {
     console.error('Error loading registered passkeys:', error);
     renderPasskeyList([]);
     setPasskeyFeedback('Unable to load passkeys.', true);
   } finally {
-    if (refreshPasskeysBtn) {
-      refreshPasskeysBtn.disabled = false;
-    }
+    setElementDisabled(refreshPasskeysBtn, false);
   }
 }
 
@@ -235,9 +284,7 @@ async function deletePasskeyCredential(credentialModelId, triggerButton) {
     return;
   }
 
-  if (triggerButton) {
-    triggerButton.disabled = true;
-  }
+  setElementDisabled(triggerButton, true);
 
   try {
     const response = await fetch(getPasskeyEndpoint(`credentials/${encodeURIComponent(credentialModelId)}`), {
@@ -246,7 +293,7 @@ async function deletePasskeyCredential(credentialModelId, triggerButton) {
         Authorization: `Bearer ${keycloak.token}`
       }
     });
-    const payload = await response.json().catch(() => ({}));
+    const payload = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(payload?.error || 'Failed to delete passkey');
     }
@@ -258,21 +305,25 @@ async function deletePasskeyCredential(credentialModelId, triggerButton) {
     console.error('Error deleting passkey:', error);
     setPasskeyFeedback('Failed to remove passkey.', true);
   } finally {
-    if (triggerButton) {
-      triggerButton.disabled = false;
-    }
+    setElementDisabled(triggerButton, false);
   }
 }
 
 function setAuthenticatedUi() {
   authStatus.textContent = 'authenticated';
-  if (authStatusAccount) authStatusAccount.textContent = 'authenticated';
-  if (loginWindow) loginWindow.hidden = true;
-  if (loginTumBtn) loginTumBtn.disabled = true;
-  if (loginPasskeyBtn) loginPasskeyBtn.disabled = true;
-  if (createPasskeyBtn) createPasskeyBtn.disabled = false;
-  if (logoutBtn) logoutBtn.disabled = false;
-  userCard.hidden = false;
+  if (authStatusAccount) {
+    authStatusAccount.textContent = 'authenticated';
+  }
+  if (loginWindow) {
+    loginWindow.hidden = true;
+  }
+  setElementDisabled(loginTumBtn, true);
+  setElementDisabled(loginPasskeyBtn, true);
+  setElementDisabled(createPasskeyBtn, false);
+  setElementDisabled(logoutBtn, false);
+  if (userCard) {
+    userCard.hidden = false;
+  }
   setPasskeyFeedback('');
   renderAuthenticatedDetails();
   void loadRegisteredPasskeys();
@@ -280,13 +331,19 @@ function setAuthenticatedUi() {
 
 function setLoggedOutUi() {
   authStatus.textContent = 'not authenticated';
-  if (authStatusAccount) authStatusAccount.textContent = 'not authenticated';
-  if (loginWindow) loginWindow.hidden = false;
-  if (loginTumBtn) loginTumBtn.disabled = false;
-  if (loginPasskeyBtn) loginPasskeyBtn.disabled = false;
-  if (createPasskeyBtn) createPasskeyBtn.disabled = true;
-  if (logoutBtn) logoutBtn.disabled = true;
-  userCard.hidden = true;
+  if (authStatusAccount) {
+    authStatusAccount.textContent = 'not authenticated';
+  }
+  if (loginWindow) {
+    loginWindow.hidden = false;
+  }
+  setElementDisabled(loginTumBtn, false);
+  setElementDisabled(loginPasskeyBtn, false);
+  setElementDisabled(createPasskeyBtn, true);
+  setElementDisabled(logoutBtn, true);
+  if (userCard) {
+    userCard.hidden = true;
+  }
   renderPasskeyList([]);
   setPasskeyFeedback('');
 }
@@ -301,17 +358,13 @@ function wireActions() {
     });
   }
 
-  loginPasskeyBtn?.addEventListener('click', async () => {
-    await authenticatePasskey();
-  });
+  loginPasskeyBtn?.addEventListener('click', () => authenticatePasskey());
 
-  createPasskeyBtn?.addEventListener('click', async () => {
-    await createPasskey();
-  });
+  createPasskeyBtn?.addEventListener('click', () => createPasskey());
 
-  refreshPasskeysBtn?.addEventListener('click', async () => {
+  refreshPasskeysBtn?.addEventListener('click', () => {
     setPasskeyFeedback('');
-    await loadRegisteredPasskeys();
+    return loadRegisteredPasskeys();
   });
 
   logoutBtn?.addEventListener('click', () => {
@@ -331,60 +384,51 @@ async function loadAppConfig() {
   return config;
 }
 
-function initAuth() {
-  loadAppConfig()
-    .then((config) => {
-      appConfig = config;
-      if (adminBtn && appConfig?.urls?.admin) {
-        adminBtn.href = appConfig.urls.admin;
-      }
+async function initAuth() {
+  try {
+    appConfig = await loadAppConfig();
+    if (adminBtn && appConfig?.urls?.admin) {
+      adminBtn.href = appConfig.urls.admin;
+    }
 
-      keycloak = new Keycloak({
-        url: appConfig.keycloak.url,
-        realm: appConfig.keycloak.realm,
-        clientId: appConfig.keycloak.clientId
-      });
-
-      wireActions();
-
-      return keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
-    })
-    .then((authenticated) => {
-      const params = new URLSearchParams(window.location.search);
-      const actionStatus = params.get('kc_action_status');
-
-      if (authenticated) {
-        setAuthenticatedUi();
-        keycloak
-          .loadUserInfo()
-          .then((userInfo) => {
-            keycloakUserProfile = userInfo || {};
-            renderAuthenticatedDetails();
-          })
-          .catch(() => {
-            keycloakUserProfile = {};
-            renderAuthenticatedDetails();
-          });
-
-        if (actionStatus === 'success') {
-          authStatus.textContent = 'passkey registered';
-          setTimeout(() => {
-            authStatus.textContent = 'authenticated';
-          }, 1500);
-        }
-        return;
-      }
-
-      setLoggedOutUi();
-    })
-    .catch((error) => {
-      console.error('Keycloak init failed', error);
-      authStatus.textContent = 'config/auth init failed';
+    keycloak = new Keycloak({
+      url: appConfig.keycloak.url,
+      realm: appConfig.keycloak.realm,
+      clientId: appConfig.keycloak.clientId
     });
+
+    wireActions();
+
+    const authenticated = await keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
+    const params = new URLSearchParams(window.location.search);
+    const actionStatus = params.get('kc_action_status');
+
+    if (!authenticated) {
+      setLoggedOutUi();
+      return;
+    }
+
+    setAuthenticatedUi();
+    try {
+      keycloakUserProfile = (await keycloak.loadUserInfo()) || {};
+    } catch {
+      keycloakUserProfile = {};
+    }
+    renderAuthenticatedDetails();
+
+    if (actionStatus === 'success') {
+      authStatus.textContent = 'passkey registered';
+      setTimeout(() => {
+        authStatus.textContent = 'authenticated';
+      }, 1500);
+    }
+  } catch (error) {
+    console.error('Keycloak init failed', error);
+    authStatus.textContent = 'config/auth init failed';
+  }
 }
 
-const createPasskey = async () => {
-  console.log("Creating passkey...");
+async function createPasskey() {
   try {
     if (!keycloak?.authenticated || !keycloak?.tokenParsed) {
       throw new Error('User must be logged in before creating a passkey.');
@@ -402,18 +446,25 @@ const createPasskey = async () => {
 
     const passkeyDefaultName = String(appConfig?.passkey?.defaultName || 'My App');
     const userIdBytes = new TextEncoder().encode(accountId).slice(0, 64);
-    const challenge = await fetch(getPasskeyEndpoint('challenge')).then(res => res.json());
+    const challengeResponse = await fetch(getPasskeyEndpoint('challenge'));
+    const challengePayload = await parseJsonResponse(challengeResponse);
+    if (!challengeResponse.ok) {
+      throw new Error(challengePayload?.error || 'Failed to create passkey challenge');
+    }
 
     const credential = await navigator.credentials.create({
       publicKey: {
-        challenge: base64UrlToUint8Array(challenge.challenge),
+        challenge: base64UrlToUint8Array(challengePayload.challenge),
         rp: { name: passkeyDefaultName, id: window.location.hostname },
         user: { id: userIdBytes, name: accountName, displayName },
-        pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-        authenticatorSelection: { userVerification: "preferred", residentKey: "required" },
-        attestation: "none",
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
+        authenticatorSelection: { userVerification: 'preferred', residentKey: 'required' },
+        attestation: 'none'
       }
     });
+    if (!credential?.rawId || !credential?.response?.clientDataJSON || !credential?.response?.attestationObject) {
+      throw new Error('Passkey registration returned an incomplete credential.');
+    }
 
     const savePayload = {
       credentialId: bufferToBase64Url(credential.rawId),
@@ -438,34 +489,39 @@ const createPasskey = async () => {
     authStatus.textContent = 'passkey created';
     setPasskeyFeedback('Passkey created.');
     await loadRegisteredPasskeys();
-    console.log("Passkey created:", credential);
   } catch (error) {
-    console.error("Error creating passkey:", error);
+    console.error('Error creating passkey:', error);
     authStatus.textContent = 'passkey creation failed';
     setPasskeyFeedback('Passkey creation failed.', true);
   }
-};
+}
 
-const authenticatePasskey = async () => {
-  console.log("Authenticating with passkey...");
+async function authenticatePasskey() {
   try {
-    const authenticateOptionsUrl = new URL(getPasskeyEndpoint('get-credential-id'));
-    const optionsResponse = await fetch(authenticateOptionsUrl.toString());
-    const res = await optionsResponse.json();
+    const optionsResponse = await fetch(getPasskeyEndpoint('get-credential-id'));
+    const optionsPayload = await parseJsonResponse(optionsResponse);
 
     if (!optionsResponse.ok) {
-      throw new Error(res?.error || 'Failed to fetch passkey authentication options');
+      throw new Error(optionsPayload?.error || 'Failed to fetch passkey authentication options');
     }
 
     const assertion = await navigator.credentials.get({
       publicKey: {
-        challenge: base64UrlToUint8Array(res.challenge),
-        ...(res.credentialId
-          ? { allowCredentials: [{ type: "public-key", id: base64UrlToUint8Array(res.credentialId) }] }
+        challenge: base64UrlToUint8Array(optionsPayload.challenge),
+        ...(optionsPayload.credentialId
+          ? { allowCredentials: [{ type: 'public-key', id: base64UrlToUint8Array(optionsPayload.credentialId) }] }
           : {}),
-        userVerification: "preferred",
-      },
+        userVerification: 'preferred'
+      }
     });
+    if (
+      !assertion?.rawId ||
+      !assertion?.response?.clientDataJSON ||
+      !assertion?.response?.authenticatorData ||
+      !assertion?.response?.signature
+    ) {
+      throw new Error('Passkey authentication returned an incomplete assertion.');
+    }
 
     const authenticationPayload = {
       credentialId: bufferToBase64Url(assertion.rawId),
@@ -473,7 +529,7 @@ const authenticatePasskey = async () => {
       clientDataJSON: bufferToBase64Url(assertion.response.clientDataJSON),
       authenticatorData: bufferToBase64Url(assertion.response.authenticatorData),
       signature: bufferToBase64Url(assertion.response.signature),
-      challenge: res.challenge
+      challenge: optionsPayload.challenge
     };
 
     const authenticateResponse = await fetch(getPasskeyEndpoint('authenticate'), {
@@ -484,25 +540,18 @@ const authenticatePasskey = async () => {
       },
       body: JSON.stringify(authenticationPayload)
     });
-    const authResult = await authenticateResponse.json();
+    const authResult = await parseJsonResponse(authenticateResponse);
 
     if (!authenticateResponse.ok) {
       throw new Error(authResult?.error || 'Passkey authentication failed');
     }
 
-    keycloak.token = authResult.access_token || '';
-    keycloak.refreshToken = authResult.refresh_token || '';
-    keycloak.tokenParsed = parseJwtPayload(keycloak.token) || {};
-    keycloak.authenticated = Boolean(keycloak.token);
-    keycloakUserProfile = null;
-
-    setAuthenticatedUi();
     authStatus.textContent = 'authenticated (passkey)';
-    console.log("Authentication successful:", authResult);
+    window.location.replace(APP_BASE_URL);
   } catch (error) {
-    console.error("Error authenticating with passkey:", error);
+    console.error('Error authenticating with passkey:', error);
     authStatus.textContent = 'passkey auth failed';
   }
-};
+}
 
-initAuth();
+void initAuth();
