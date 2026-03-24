@@ -52,6 +52,10 @@ The file `keycloak/realm-export.json` is imported automatically and contains:
 - Passkey policy:
   - Passwordless WebAuthn (resident key required, user verification required)
   - RP ID: from `.env` (`KC_WEBAUTHN_RP_ID`)
+  - Required action `delete_credential` enabled (needed for AIA passkey deletion)
+
+If your `demo` realm already exists in the Docker volume, import changes are not applied automatically.
+Either enable `Delete Credential` manually in the admin console (`Authentication -> Required actions`) or recreate Keycloak data volume and re-import the realm.
 
 ## Use Password Login
 

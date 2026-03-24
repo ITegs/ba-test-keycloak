@@ -287,9 +287,10 @@ async function deletePasskeyCredential(credentialModelId, triggerButton) {
   setElementDisabled(triggerButton, true);
 
   try {
-    const response = await fetch(getPasskeyEndpoint(`credentials/${encodeURIComponent(credentialModelId)}`), {
+    const response = await fetch(getAccountCredentialsEndpoint() + `/${encodeURIComponent(credentialModelId)}`, {
       method: 'DELETE',
       headers: {
+        Accept: 'application/json',
         Authorization: `Bearer ${keycloak.token}`
       }
     });
@@ -446,7 +447,9 @@ async function createPasskey() {
 
     const passkeyDefaultName = String(appConfig?.passkey?.defaultName || 'My App');
     const userIdBytes = new TextEncoder().encode(accountId).slice(0, 64);
-    const challengeResponse = await fetch(getPasskeyEndpoint('challenge'));
+    const challengeResponse = await fetch(getPasskeyEndpoint('challenge'), {
+      credentials: 'include'
+    });
     const challengePayload = await parseJsonResponse(challengeResponse);
     if (!challengeResponse.ok) {
       throw new Error(challengePayload?.error || 'Failed to create passkey challenge');
@@ -470,11 +473,13 @@ async function createPasskey() {
       credentialId: bufferToBase64Url(credential.rawId),
       rawId: bufferToBase64Url(credential.rawId),
       clientDataJSON: bufferToBase64Url(credential.response.clientDataJSON),
-      attestationObject: bufferToBase64Url(credential.response.attestationObject)
+      attestationObject: bufferToBase64Url(credential.response.attestationObject),
+      challenge: challengePayload.challenge
     };
 
     const saveResponse = await fetch(getPasskeyEndpoint('save'), {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${keycloak.token}`
@@ -498,7 +503,9 @@ async function createPasskey() {
 
 async function authenticatePasskey() {
   try {
-    const optionsResponse = await fetch(getPasskeyEndpoint('get-credential-id'));
+    const optionsResponse = await fetch(getPasskeyEndpoint('challenge'), {
+      credentials: 'include'
+    });
     const optionsPayload = await parseJsonResponse(optionsResponse);
 
     if (!optionsResponse.ok) {
