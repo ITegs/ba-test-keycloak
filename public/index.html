@@ -23,7 +23,7 @@
       </header>
 
       <section class="panel login-window" id="login-window">
-        <p class="status-line">Status: <strong id="auth-status">checking...</strong></p>
+        <p class="status-line">Status: <strong id="auth-status" class="status-value" data-state="pending">checking...</strong></p>
         <h2>Sign In</h2>
         <p class="helper-text">Choose one of the two login options.</p>
         <div class="actions stacked">
@@ -35,7 +35,7 @@
       <section class="panel account-window" id="user-card" hidden>
         <div class="account-header">
           <h2>User Session</h2>
-          <p class="status-line">Status: <strong id="auth-status-account">authenticated</strong></p>
+          <p class="status-line">Status: <strong id="auth-status-account" class="status-value" data-state="authenticated">authenticated</strong></p>
         </div>
         <div class="actions">
           <button id="create-passkey-btn">Create Passkey</button>
@@ -50,10 +50,10 @@
           <p id="passkey-empty" class="helper-text">No passkeys registered yet.</p>
           <ul id="passkey-list" class="passkey-list"></ul>
         </div>
-        <div class="user-data">
-          <h3>User Data</h3>
+        <details id="user-info-toggle" class="user-data">
+          <summary>Userinfo</summary>
           <pre id="user-info"></pre>
-        </div>
+        </details>
       </section>
     </main>
   </body>

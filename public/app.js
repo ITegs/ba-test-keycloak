@@ -10,6 +10,7 @@ const createPasskeyBtn = document.getElementById('create-passkey-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const userCard = document.getElementById('user-card');
 const userInfo = document.getElementById('user-info');
+const userInfoToggle = document.getElementById('user-info-toggle');
 const refreshPasskeysBtn = document.getElementById('refresh-passkeys-btn');
 const passkeyList = document.getElementById('passkey-list');
 const passkeyEmpty = document.getElementById('passkey-empty');
@@ -53,6 +54,22 @@ function setElementDisabled(element, isDisabled) {
   if (element) {
     element.disabled = Boolean(isDisabled);
   }
+}
+
+function setStatusValue(element, text, state) {
+  if (!element) {
+    return;
+  }
+  element.textContent = text;
+  element.dataset.state = state;
+}
+
+function setLoginStatus(text, state) {
+  setStatusValue(authStatus, text, state);
+}
+
+function setAccountStatus(text, state) {
+  setStatusValue(authStatusAccount, text, state);
 }
 
 function parseJwtPayload(token) {
@@ -299,7 +316,7 @@ async function deletePasskeyCredential(credentialModelId, triggerButton) {
       throw new Error(payload?.error || 'Failed to delete passkey');
     }
 
-    authStatus.textContent = 'passkey removed';
+    setLoginStatus('passkey removed', 'authenticated');
     setPasskeyFeedback('Passkey removed.');
     await loadRegisteredPasskeys();
   } catch (error) {
@@ -311,10 +328,8 @@ async function deletePasskeyCredential(credentialModelId, triggerButton) {
 }
 
 function setAuthenticatedUi() {
-  authStatus.textContent = 'authenticated';
-  if (authStatusAccount) {
-    authStatusAccount.textContent = 'authenticated';
-  }
+  setLoginStatus('authenticated', 'authenticated');
+  setAccountStatus('authenticated', 'authenticated');
   if (loginWindow) {
     loginWindow.hidden = true;
   }
@@ -325,16 +340,17 @@ function setAuthenticatedUi() {
   if (userCard) {
     userCard.hidden = false;
   }
+  if (userInfoToggle) {
+    userInfoToggle.open = false;
+  }
   setPasskeyFeedback('');
   renderAuthenticatedDetails();
   void loadRegisteredPasskeys();
 }
 
 function setLoggedOutUi() {
-  authStatus.textContent = 'not authenticated';
-  if (authStatusAccount) {
-    authStatusAccount.textContent = 'not authenticated';
-  }
+  setLoginStatus('not authenticated', 'unauthenticated');
+  setAccountStatus('not authenticated', 'unauthenticated');
   if (loginWindow) {
     loginWindow.hidden = false;
   }
@@ -418,14 +434,14 @@ async function initAuth() {
     renderAuthenticatedDetails();
 
     if (actionStatus === 'success') {
-      authStatus.textContent = 'passkey registered';
+      setLoginStatus('passkey registered', 'authenticated');
       setTimeout(() => {
-        authStatus.textContent = 'authenticated';
+        setLoginStatus('authenticated', 'authenticated');
       }, 1500);
     }
   } catch (error) {
     console.error('Keycloak init failed', error);
-    authStatus.textContent = 'config/auth init failed';
+    setLoginStatus('config/auth init failed', 'error');
   }
 }
 
@@ -491,12 +507,12 @@ async function createPasskey() {
       throw new Error(saveResultText || 'Failed to store passkey');
     }
 
-    authStatus.textContent = 'passkey created';
+    setLoginStatus('passkey created', 'authenticated');
     setPasskeyFeedback('Passkey created.');
     await loadRegisteredPasskeys();
   } catch (error) {
     console.error('Error creating passkey:', error);
-    authStatus.textContent = 'passkey creation failed';
+    setLoginStatus('passkey creation failed', 'error');
     setPasskeyFeedback('Passkey creation failed.', true);
   }
 }
@@ -553,11 +569,11 @@ async function authenticatePasskey() {
       throw new Error(authResult?.error || 'Passkey authentication failed');
     }
 
-    authStatus.textContent = 'authenticated (passkey)';
+    setLoginStatus('authenticated (passkey)', 'authenticated');
     window.location.replace(APP_BASE_URL);
   } catch (error) {
     console.error('Error authenticating with passkey:', error);
-    authStatus.textContent = 'passkey auth failed';
+    setLoginStatus('passkey auth failed', 'error');
   }
 }
 
