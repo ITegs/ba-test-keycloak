@@ -558,11 +558,21 @@ async function authenticatePasskey() {
     const authenticateResponse = await fetch(getPasskeyEndpoint('authenticate'), {
       method: 'POST',
       credentials: 'include',
+      redirect: 'manual',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(authenticationPayload)
     });
+
+    if(authenticateResponse.type === 'opaqueredirect') {
+        const redirectUrl = authenticateResponse.url;
+        if (redirectUrl) {
+            window.location.replace(redirectUrl);
+            return;
+        }
+    }
+
     const authResult = await parseJsonResponse(authenticateResponse);
 
     if (!authenticateResponse.ok) {
