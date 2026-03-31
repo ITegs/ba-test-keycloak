@@ -17,6 +17,7 @@ Relevant client envs:
 - `PUBLIC_KEYCLOAK_URL`
 - `PUBLIC_KEYCLOAK_ADMIN_URL`
 - `PUBLIC_PASSKEY_DEFAULT_NAME` (displayed as RP name in the browser passkey prompt)
+- `CORS_ALLOWED_ORIGINS` (comma-separated strict allowlist, e.g. `http://localhost:3000`)
 
 ## 1. Start Keycloak
 
@@ -70,12 +71,18 @@ Either enable `Delete Credential` manually in the admin console (`Authentication
 2. Click **Register Passkey** in the demo app
 3. Complete the platform/browser authenticator flow
 4. Logout from the demo app
-5. Click **Login** again and use the passkey option on the Keycloak login screen
+5. Click **Login with Passkey**
+6. The client calls `/passkey/authenticate`, receives `204`, then silently refreshes `check-sso` and signs in without visible page navigation
 
 Notes:
 - Passkeys require a browser/platform authenticator that supports WebAuthn.
 - On localhost, modern browsers allow passkey flows over HTTP for local development.
 - The demo app loads the Keycloak JS adapter from a local npm dependency (`keycloak-js@26.0.7`) served at `/vendor/keycloak.js`.
+- Silent SSO callback page is served at `/silent-check-sso.html` and used by `keycloak.init({ onLoad: 'check-sso' })`.
+
+Recommended client structure:
+- Keep auth actions in one `keycloakClient.js`.
+- Expose and use only: `loginWithPassword()`, `loginWithPasskey()`, `registerPasskey()`, and `logout()`.
 
 ## OIDC Endpoints (realm: `demo`)
 

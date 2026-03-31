@@ -20,7 +20,17 @@ let keycloak;
 let keycloakUserProfile = null;
 let appConfig;
 const APP_BASE_URL = new URL('./', window.location.href).toString();
+const SILENT_CHECK_SSO_URI = new URL('./silent-check-sso.html', APP_BASE_URL).toString();
 const PASSKEY_CREDENTIAL_TYPES = new Set(['webauthn-passwordless', 'webauthn']);
+
+function getCheckSsoInitOptions() {
+  return {
+    onLoad: 'check-sso',
+    pkceMethod: 'S256',
+    silentCheckSsoRedirectUri: SILENT_CHECK_SSO_URI,
+    silentCheckSsoFallback: false
+  };
+}
 
 function requireKeycloakAuthServer() {
   if (!keycloak?.authServerUrl || !keycloak?.realm) {
@@ -109,6 +119,33 @@ function bufferToBase64Url(buffer) {
   }
 
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+async function refreshAuthenticationFromBrowserSession() {
+  if (!appConfig?.keycloak?.url || !appConfig?.keycloak?.realm || !appConfig?.keycloak?.clientId) {
+    throw new Error('Invalid app config');
+  }
+
+  const refreshedKeycloak = new Keycloak({
+    url: appConfig.keycloak.url,
+    realm: appConfig.keycloak.realm,
+    clientId: appConfig.keycloak.clientId
+  });
+
+  const authenticated = await refreshedKeycloak.init(getCheckSsoInitOptions());
+  if (!authenticated) {
+    throw new Error('Session cookie was not accepted by Keycloak check-sso');
+  }
+
+  keycloak = refreshedKeycloak;
+  try {
+    keycloakUserProfile = (await keycloak.loadUserInfo()) || {};
+  } catch {
+    keycloakUserProfile = {};
+  }
+
+  setAuthenticatedUi();
+  renderAuthenticatedDetails();
 }
 
 function buildUserInfo(user, token) {
@@ -416,7 +453,7 @@ async function initAuth() {
 
     wireActions();
 
-    const authenticated = await keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
+    const authenticated = await keycloak.init(getCheckSsoInitOptions());
     const params = new URLSearchParams(window.location.search);
     const actionStatus = params.get('kc_action_status');
 
@@ -558,29 +595,21 @@ async function authenticatePasskey() {
     const authenticateResponse = await fetch(getPasskeyEndpoint('authenticate'), {
       method: 'POST',
       credentials: 'include',
-      redirect: 'manual',
       headers: {
+        Accept: 'application/json',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(authenticationPayload)
     });
 
-    if(authenticateResponse.type === 'opaqueredirect') {
-        const redirectUrl = authenticateResponse.url;
-        if (redirectUrl) {
-            window.location.replace(redirectUrl);
-            return;
-        }
-    }
-
-    const authResult = await parseJsonResponse(authenticateResponse);
-
     if (!authenticateResponse.ok) {
+      const authResult = await parseJsonResponse(authenticateResponse);
       throw new Error(authResult?.error || 'Passkey authentication failed');
     }
 
+    setLoginStatus('refreshing session...', 'authenticating');
+    await refreshAuthenticationFromBrowserSession();
     setLoginStatus('authenticated (passkey)', 'authenticated');
-    window.location.replace(APP_BASE_URL);
   } catch (error) {
     console.error('Error authenticating with passkey:', error);
     setLoginStatus('passkey auth failed', 'error');
