@@ -1,0 +1,26 @@
+{
+  "name": "passkey-client-lib",
+  "version": "0.1.0",
+  "description": "Angular client library for Keycloak passkey extension",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json"
+  },
+  "peerDependencies": {
+    "@angular/common": ">=17.0.0",
+    "@angular/core": ">=17.0.0",
+    "keycloak-js": ">=26.0.0",
+    "rxjs": ">=7.8.0"
+  },
+  "devDependencies": {
+    "@angular/compiler": ">=17.0.0",
+    "@angular/compiler-cli": ">=17.0.0",
+    "@types/node": "^22.13.0",
+    "ng-packagr": "^20.0.0",
+    "typescript": "^5.7.2"
+  }
+}
