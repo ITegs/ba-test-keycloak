@@ -6,6 +6,17 @@
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
   "rememberMe": true,
+  "eventsEnabled": true,
+  "eventsListeners": [
+    "jboss-logging"
+  ],
+  "enabledEventTypes": [
+    "LOGIN",
+    "LOGIN_ERROR",
+    "REGISTER"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
   "webAuthnPolicyRpEntityName": "Test Keycloak Demo",
   "webAuthnPolicySignatureAlgorithms": [
     "ES256",
@@ -69,7 +80,7 @@
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "redirectUris": [
         "http://localhost:3000/*",
         "${KC_DEMO_ADDITIONAL_REDIRECT_URI}"
