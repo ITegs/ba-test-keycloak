@@ -1,3 +1,6 @@
 [submodule "keycloak-custom-passkey-login"]
 	path = keycloak-custom-passkey-login
 	url = https://github.com/ITegs/keycloak-redirectless-passkey.git
+[submodule "passkey-client-lib"]
+	path = passkey-client-lib
+	url = https://github.com/ITegs/keycloak-client-lib.git
